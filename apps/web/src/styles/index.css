@@ -1,0 +1,30 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background font-body text-on-surface antialiased;
+    min-height: 100vh;
+  }
+
+  * {
+    @apply border-outline-variant/20;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-primary-fixed/30 bg-white/70 backdrop-blur-xl shadow-glass;
+  }
+
+  .section-card {
+    @apply rounded-editorial bg-surface-container-lowest p-6 shadow-ambient;
+  }
+
+  .soft-card {
+    @apply rounded-3xl bg-surface-container-low p-5;
+  }
+}

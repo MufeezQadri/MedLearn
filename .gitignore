@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env
+.DS_Store
+*.log
+*.tsbuildinfo
+apps/web/.vite
+apps/api/dev.db
+.agent/
+extracted/
+medlearnai.zip
