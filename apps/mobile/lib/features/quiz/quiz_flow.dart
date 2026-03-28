@@ -6,21 +6,41 @@ import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/app_state.dart';
+import '../../core/api_client.dart';
 import '../../core/mock_data.dart';
 import '../../core/models.dart';
 import '../../core/widgets/med_widgets.dart';
 
-class QuizHubPage extends ConsumerWidget {
+class QuizHubPage extends ConsumerStatefulWidget {
   const QuizHubPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuizHubPage> createState() => _QuizHubPageState();
+}
+
+class _QuizHubPageState extends ConsumerState<QuizHubPage> {
+  List<QuizSummary>? _quizzes;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuizzes();
+  }
+
+  Future<void> _loadQuizzes() async {
+    final live = await MedLearnApi.getQuizzes();
+    if (mounted) setState(() => _quizzes = live);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
     final user = state.currentUser ?? DemoCatalog.student;
-    final attempts = state.attempts.where((attempt) => attempt.userId == user.id).toList();
+    final attempts = state.attempts.where((a) => a.userId == user.id).toList();
     final averageAccuracy = attempts.isEmpty
         ? 78
-        : (attempts.map((attempt) => attempt.accuracy).reduce((a, b) => a + b) / attempts.length).round();
+        : (attempts.map((a) => a.accuracy).reduce((a, b) => a + b) / attempts.length).round();
+    final quizzes = _quizzes ?? [];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
@@ -104,9 +124,15 @@ class QuizHubPage extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
+        if (_quizzes == null)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else ...[
         const SectionHeader(eyebrow: 'Available quizzes', title: 'Start a session'),
         const SizedBox(height: 14),
-        ...DemoCatalog.quizzes.map(
+        ...quizzes.map(
           (quiz) => Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: _QuizCard(quiz: quiz),
@@ -124,7 +150,10 @@ class QuizHubPage extends ConsumerWidget {
         else
           ...attempts.reversed.map(
             (attempt) {
-              final quiz = DemoCatalog.quizzes.firstWhere((quiz) => quiz.id == attempt.quizId);
+              final quiz = quizzes.firstWhere(
+                (q) => q.id == attempt.quizId,
+                orElse: () => quizzes.isNotEmpty ? quizzes.first : DemoCatalog.quizzes.first,
+              );
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
@@ -175,6 +204,7 @@ class QuizHubPage extends ConsumerWidget {
               );
             },
           ),
+        ], // end of _quizzes != null
       ],
     );
   }

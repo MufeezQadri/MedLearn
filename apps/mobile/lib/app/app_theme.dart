@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MedlearnColors {
-  static const background = Color(0xFFF4F7F3);
-  static const backgroundWarm = Color(0xFFF7F2EB);
+  static const background = Color(0xFFFFFFFF);
+  static const backgroundWarm = Color(0xFFFAFAFA);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceLow = Color(0xFFF8FBF9);
-  static const surfaceHigh = Color(0xFFE3ECE8);
-  static const surfaceTint = Color(0xFFEFF5F2);
-  static const primary = Color(0xFF0C6771);
-  static const primaryDark = Color(0xFF0A3F47);
-  static const primaryContainer = Color(0xFF15929F);
-  static const primaryFixed = Color(0xFFCDEEF0);
-  static const secondaryContainer = Color(0xFFE0F0E6);
-  static const accent = Color(0xFFF18B4A);
-  static const accentSoft = Color(0xFFF9E7D9);
-  static const tertiary = Color(0xFF2B7E58);
-  static const tertiarySoft = Color(0xFFE7F6EC);
-  static const onSurface = Color(0xFF13232B);
-  static const onSurfaceVariant = Color(0xFF5E6D75);
-  static const outline = Color(0xFFD4DDD9);
-  static const error = Color(0xFFC24E43);
-  static const errorSoft = Color(0xFFFBE2DE);
-  static const shadow = Color.fromRGBO(16, 35, 43, 0.08);
+  static const surfaceLow = Color(0xFFF5F5F5);
+  static const surfaceHigh = Color(0xFFEBEBEB);
+  static const surfaceTint = Color(0xFFF5F5F5);
+  static const primary = Color(0xFF111111);
+  static const primaryDark = Color(0xFF000000);
+  static const primaryContainer = Color(0xFF333333);
+  static const primaryFixed = Color(0xFFE5E5E5);
+  static const secondaryContainer = Color(0xFFF5F5F5);
+  static const accent = Color(0xFF111111);
+  static const accentSoft = Color(0xFFF0F0F0);
+  static const tertiary = Color(0xFF555555);
+  static const tertiarySoft = Color(0xFFF5F5F5);
+  static const onSurface = Color(0xFF111111);
+  static const onSurfaceVariant = Color(0xFF666666);
+  static const outline = Color(0xFFE5E5E5);
+  static const error = Color(0xFFD32F2F);
+  static const errorSoft = Color(0xFFFFEBEE);
+  static const shadow = Color.fromRGBO(0, 0, 0, 0.04);
 }
 
 class MedLearnTheme {
@@ -121,7 +121,7 @@ class MedLearnTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: MedlearnColors.outline, width: 1),
         ),
       ),
@@ -164,15 +164,15 @@ class MedLearnTheme {
         prefixIconColor: MedlearnColors.onSurfaceVariant,
         suffixIconColor: MedlearnColors.onSurfaceVariant,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: MedlearnColors.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: MedlearnColors.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: MedlearnColors.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -185,8 +185,8 @@ class MedLearnTheme {
             fontWeight: FontWeight.w800,
             fontSize: 15,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -197,8 +197,8 @@ class MedLearnTheme {
             fontSize: 15,
           ),
           side: const BorderSide(color: MedlearnColors.outline),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -215,7 +215,7 @@ class MedLearnTheme {
           backgroundColor: MedlearnColors.surface,
           padding: const EdgeInsets.all(12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: MedlearnColors.outline),
           ),
         ),
@@ -232,7 +232,7 @@ class MedLearnTheme {
           fontWeight: FontWeight.w700,
         ),
         side: const BorderSide(color: MedlearnColors.outline),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: MedlearnColors.primary,

@@ -10,10 +10,8 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().default("development-refresh-secret"),
   POSTGRES_URL: z.string().default("postgresql://postgres:postgres@localhost:5432/medlearn"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_BASE_URL: z.string().default("https://api.openai.com/v1"),
-  VECTOR_DB_URL: z.string().optional(),
-  VECTOR_DB_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(), // kept for backward compat
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

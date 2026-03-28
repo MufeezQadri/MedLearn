@@ -30,6 +30,7 @@ export interface Course {
   slug: string;
   title: string;
   description: string;
+  section: string;
   subject: string;
   difficulty: Difficulty;
   durationHours: number;
@@ -76,6 +77,7 @@ export interface Book {
   title: string;
   author: string;
   category: string;
+  subject: string;
   edition: string;
   coverUrl: string;
   description: string;

@@ -1,64 +1,79 @@
-import { v4 as uuidv4 } from "uuid";
+import { prisma } from "../lib/db.js";
 import { cache } from "../lib/cache.js";
-import { state } from "../data/store.js";
 import { AppError } from "../lib/http-error.js";
-
-const applySearch = (query: string) => {
-  const needle = query.toLowerCase();
-
-  return state.books.filter(
-    (item) =>
-      item.title.toLowerCase().includes(needle) ||
-      item.author.toLowerCase().includes(needle) ||
-      item.tags.some((tag) => tag.toLowerCase().includes(needle)),
-  );
-};
 
 export const booksService = {
   async getBooks(search?: string) {
     const cacheKey = `books:${search ?? "all"}`;
-    const cached = await cache.get<typeof state.books>(cacheKey);
+    const cached = await cache.get(cacheKey);
 
-    if (cached) {
-      return cached;
+    if (cached) return cached;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { title: { contains: search } },
+        { author: { contains: search } },
+        { tags: { contains: search } },
+      ];
     }
 
-    const results = search ? applySearch(search) : [...state.books];
-    await cache.set(cacheKey, results, 180);
-    return results;
+    const results = await prisma.book.findMany({ where });
+
+    const formatted = results.map((b: any) => ({
+      ...b,
+      tags: b.tags ? b.tags.split(',') : []
+    }));
+
+    await cache.set(cacheKey, formatted, 180);
+    return formatted;
   },
 
-  getBook(bookId: string) {
-    const book = state.books.find((item) => item.id === bookId);
+  async getBook(bookId: string) {
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
 
     if (!book) {
       throw new AppError("Book not found", 404);
     }
 
-    return book;
+    return {
+      ...book,
+      tags: book.tags ? book.tags.split(',') : []
+    };
   },
 
-  createBook(payload: {
+  async createBook(payload: {
     title: string;
     author: string;
     category: string;
+    subject: string;
     edition: string;
     coverUrl: string;
     description: string;
     tags?: string[];
   }) {
-    const book = {
-      id: uuidv4(),
-      featured: false,
-      tags: payload.tags ?? [],
-      ...payload,
-    };
+    const book = await prisma.book.create({
+      data: {
+        title: payload.title,
+        author: payload.author,
+        category: payload.category,
+        subject: payload.subject,
+        edition: payload.edition,
+        coverUrl: payload.coverUrl,
+        description: payload.description,
+        featured: false,
+        tags: payload.tags ? payload.tags.join(',') : "",
+      }
+    });
 
-    state.books.push(book);
-    return book;
+    await cache.del("books:all");
+    return {
+      ...book,
+      tags: book.tags ? book.tags.split(',') : []
+    };
   },
 
-  searchBooks(query: string) {
-    return applySearch(query);
+  async searchBooks(query: string) {
+    return await this.getBooks(query);
   },
 };

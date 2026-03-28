@@ -5,20 +5,10 @@ type CacheValue = unknown;
 
 class CacheService {
   private memory = new Map<string, CacheValue>();
-  private redis?: Redis;
+  private redis?: any;
 
   constructor() {
-    try {
-      this.redis = new Redis(env.REDIS_URL, {
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-      });
-      void this.redis.connect().catch(() => {
-        this.redis = undefined;
-      });
-    } catch {
-      this.redis = undefined;
-    }
+    this.redis = undefined; // Force memory cache for local MVP to prevent connection timeouts when Redis is offline.
   }
 
   async get<T>(key: string): Promise<T | null> {

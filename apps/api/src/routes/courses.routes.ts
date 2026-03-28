@@ -7,8 +7,11 @@ import { courseSchema, updateCourseSchema } from "./schemas.js";
 
 export const coursesRoutes = Router();
 
-coursesRoutes.get("/", requireAuth, asyncHandler(coursesController.list));
-coursesRoutes.get("/:id", requireAuth, asyncHandler(coursesController.get));
+// Public reads — the Flutter mobile app fetches these without auth for the MVP
+coursesRoutes.get("/", asyncHandler(coursesController.list));
+coursesRoutes.get("/:id", asyncHandler(coursesController.get));
+
+// Admin-only mutations — fully secured
 coursesRoutes.post("/", requireAuth, requireRole("admin"), validate(courseSchema), asyncHandler(coursesController.create));
 coursesRoutes.put(
   "/:id",
@@ -18,4 +21,6 @@ coursesRoutes.put(
   asyncHandler(coursesController.update),
 );
 coursesRoutes.delete("/:id", requireAuth, requireRole("admin"), asyncHandler(coursesController.remove));
+
+// Enroll requires user identity
 coursesRoutes.post("/:id/enroll", requireAuth, asyncHandler(coursesController.enroll));

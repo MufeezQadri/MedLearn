@@ -7,8 +7,16 @@ import { bookSchema } from "./schemas.js";
 
 export const booksRoutes = Router();
 
-booksRoutes.use(requireAuth);
+// Public reads — students can browse books even without login
 booksRoutes.get("/", asyncHandler(booksController.list));
 booksRoutes.get("/search", asyncHandler(booksController.search));
 booksRoutes.get("/:id", asyncHandler(booksController.get));
-booksRoutes.post("/", requireRole("admin"), validate(bookSchema), asyncHandler(booksController.create));
+
+// Admin-only writes — fully secured
+booksRoutes.post(
+  "/",
+  requireAuth,
+  requireRole("admin"),
+  validate(bookSchema),
+  asyncHandler(booksController.create),
+);

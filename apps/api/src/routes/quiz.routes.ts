@@ -7,16 +7,17 @@ import { questionSchema, startQuizSchema, submitQuizSchema } from "./schemas.js"
 
 export const quizRoutes = Router();
 
-quizRoutes.use(requireAuth);
+// Public reads — the app can show the quiz catalog without login
 quizRoutes.get("/", asyncHandler(quizController.list));
-quizRoutes.get("/history", asyncHandler(quizController.history));
-quizRoutes.get("/result/:id", asyncHandler(quizController.result));
-quizRoutes.post("/start", validate(startQuizSchema), asyncHandler(quizController.start));
-quizRoutes.post("/submit", validate(submitQuizSchema), asyncHandler(quizController.submit));
 quizRoutes.get("/:id", asyncHandler(quizController.get));
+
+// Auth-required actions
+quizRoutes.get("/history", requireAuth, asyncHandler(quizController.history));
+quizRoutes.get("/result/:id", requireAuth, asyncHandler(quizController.result));
+quizRoutes.post("/start", requireAuth, validate(startQuizSchema), asyncHandler(quizController.start));
+quizRoutes.post("/submit", requireAuth, validate(submitQuizSchema), asyncHandler(quizController.submit));
 
 export const questionRoutes = Router();
 
-questionRoutes.use(requireAuth);
 questionRoutes.get("/", asyncHandler(quizController.questions));
-questionRoutes.post("/", requireRole("admin"), validate(questionSchema), asyncHandler(quizController.createQuestion));
+questionRoutes.post("/", requireAuth, requireRole("admin"), validate(questionSchema), asyncHandler(quizController.createQuestion));

@@ -1,99 +1,115 @@
-import { v4 as uuidv4 } from "uuid";
+import { prisma } from "../lib/db.js";
 import { cache } from "../lib/cache.js";
-import { state } from "../data/store.js";
-import { getCourseOrThrow } from "./helpers.js";
 
 export const coursesService = {
   async getCourses(query?: { subject?: string; search?: string }) {
     const cacheKey = `courses:${query?.subject ?? "all"}:${query?.search ?? "all"}`;
-    const cached = await cache.get<typeof state.courses>(cacheKey);
+    const cached = await cache.get(cacheKey);
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
-    let results = [...state.courses];
-
+    const where: any = {};
+    
     if (query?.subject) {
-      results = results.filter((item) => item.subject.toLowerCase() === query.subject?.toLowerCase());
+      where.subject = { equals: query.subject };
     }
 
     if (query?.search) {
-      const needle = query.search.toLowerCase();
-      results = results.filter(
-        (item) =>
-          item.title.toLowerCase().includes(needle) ||
-          item.description.toLowerCase().includes(needle) ||
-          item.tags.some((tag) => tag.toLowerCase().includes(needle)),
-      );
+      where.OR = [
+        { title: { contains: query.search } },
+        { description: { contains: query.search } },
+        { tags: { contains: query.search } },
+      ];
     }
 
-    await cache.set(cacheKey, results, 120);
-    return results;
+    const results = await prisma.course.findMany({
+      where,
+      include: {
+        _count: { select: { modules: true } }
+      }
+    });
+
+    // Formatting tags back to array for frontend
+    const formatted = results.map((c: any) => ({
+      ...c,
+      tags: c.tags ? c.tags.split(',') : []
+    }));
+
+    await cache.set(cacheKey, formatted, 60);
+    return formatted;
   },
 
-  getCourse(courseId: string) {
-    const course = getCourseOrThrow(courseId);
-
+  async getCourse(courseId: string) {
+    const course = await prisma.course.findUniqueOrThrow({
+      where: { id: courseId },
+      include: { modules: { orderBy: { orderIndex: 'asc' } } }
+    });
     return {
       ...course,
-      modules: state.modules
-        .filter((item) => item.courseId === course.id)
-        .sort((left, right) => left.orderIndex - right.orderIndex),
+      tags: course.tags ? course.tags.split(',') : []
     };
   },
 
   async createCourse(payload: {
     title: string;
     description: string;
+    section: string;
     subject: string;
     difficulty: "easy" | "medium" | "hard";
     durationHours: number;
     educator: string;
     thumbnailUrl: string;
   }) {
-    const course = {
-      id: uuidv4(),
-      slug: payload.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      title: payload.title,
-      description: payload.description,
-      subject: payload.subject,
-      difficulty: payload.difficulty,
-      durationHours: payload.durationHours,
-      educator: payload.educator,
-      thumbnailUrl: payload.thumbnailUrl,
-      progressPercent: 0,
-      enrolledStudents: 0,
-      tags: [],
-    };
-
-    state.courses.push(course);
+    const course = await prisma.course.create({
+      data: {
+        slug: payload.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        title: payload.title,
+        description: payload.description,
+        section: payload.section || "General",
+        subject: payload.subject,
+        difficulty: payload.difficulty,
+        durationHours: payload.durationHours,
+        educator: payload.educator,
+        thumbnailUrl: payload.thumbnailUrl,
+        tags: "",
+      }
+    });
     await cache.del("courses:all:all");
     return course;
   },
 
-  async updateCourse(courseId: string, payload: Partial<Omit<(typeof state.courses)[number], "id">>) {
-    const course = getCourseOrThrow(courseId);
-    Object.assign(course, payload);
+  async updateCourse(courseId: string, payload: any) {
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: payload
+    });
     await cache.del("courses:all:all");
     return course;
   },
 
   async deleteCourse(courseId: string) {
-    const course = getCourseOrThrow(courseId);
-    state.courses = state.courses.filter((item) => item.id !== course.id);
-    state.modules = state.modules.filter((item) => item.courseId !== course.id);
+    await prisma.course.delete({ where: { id: courseId } });
     await cache.del("courses:all:all");
     return { deleted: true };
   },
 
-  enrollCourse(courseId: string, _userId: string) {
-    const course = getCourseOrThrow(courseId);
-    course.enrolledStudents += 1;
+  async enrollCourse(courseId: string, userId: string) {
+    const enrollment = await prisma.enrollment.upsert({
+      where: {
+        userId_courseId: { userId, courseId }
+      },
+      update: {},
+      create: {
+        userId,
+        courseId
+      }
+    });
+    
+    await prisma.course.update({
+      where: { id: courseId },
+      data: { enrolledStudents: { increment: 1 } }
+    });
 
-    return {
-      enrolled: true,
-      course,
-    };
+    return { enrolled: true };
   },
 };

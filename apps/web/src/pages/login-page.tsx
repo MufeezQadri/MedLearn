@@ -13,16 +13,18 @@ export const LoginPage = () => {
   const { login, signup } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
-    email: "sarah@medlearn.ai",
-    password: "Password@123",
+    email: "admin@medlearn.com",
+    password: "password123",
     examTrack: "NEET_PG" as const,
   });
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
+    setError("");
+    setIsSubmitting(true);
     try {
       if (mode === "login") {
         await login(form.email, form.password);
@@ -30,13 +32,15 @@ export const LoginPage = () => {
         await signup({
           fullName: form.fullName || "Dr. New Learner",
           email: form.email,
+          password: form.password,
           examTrack: form.examTrack,
         });
       }
-
       navigate(redirectTarget);
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Unable to continue");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -136,14 +140,16 @@ export const LoginPage = () => {
               </label>
             ) : null}
             {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
-            <Button className="w-full">{mode === "login" ? "Enter workspace" : "Create account"}</Button>
+            <Button className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Please wait..." : mode === "login" ? "Enter workspace" : "Create account"}
+            </Button>
           </form>
 
           <div className="mt-6 rounded-3xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-            Demo credentials:
+            Demo credentials (use the real admin account):
             <div className="mt-2 space-y-1 font-medium text-on-surface">
-              <p>`sarah@medlearn.ai` / `Password@123`</p>
-              <p>`admin@medlearn.ai` / `Admin@123`</p>
+              <p>{`admin@medlearn.com`} / {`password123`}</p>
+              <p>{`priya@example.com`} / {`password123`}</p>
             </div>
           </div>
         </Card>

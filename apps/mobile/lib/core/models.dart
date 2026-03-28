@@ -63,6 +63,7 @@ class Course {
     required this.id,
     required this.title,
     required this.description,
+    required this.section,
     required this.subject,
     required this.educator,
     required this.durationHours,
@@ -75,6 +76,7 @@ class Course {
   final String id;
   final String title;
   final String description;
+  final String section;
   final String subject;
   final String educator;
   final int durationHours;
@@ -110,6 +112,7 @@ class LibraryBook {
     required this.title,
     required this.author,
     required this.category,
+    required this.subject,
     required this.edition,
     required this.summary,
     required this.tags,
@@ -119,6 +122,7 @@ class LibraryBook {
   final String title;
   final String author;
   final String category;
+  final String subject;
   final String edition;
   final String summary;
   final List<String> tags;

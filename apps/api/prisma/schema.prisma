@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Switches between SQLite (dev) and PostgreSQL (production) via env var
+  provider = env("DATABASE_PROVIDER") // "sqlite" or "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("student") // student, admin
+  examTrack    String   @default("MBBS")    // MBBS, NEET_PG, USMLE
+  avatarUrl    String?
+  streakDays   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  enrollments  Enrollment[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Course {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  title            String
+  description      String
+  section          String
+  subject          String
+  difficulty       String
+  durationHours    Int      @default(0)
+  educator         String
+  thumbnailUrl     String
+  enrolledStudents Int      @default(0)
+  tags             String   // comma-separated
+
+  // Relations
+  modules          Module[]
+  enrollments      Enrollment[]
+
+  @@index([subject])
+  @@index([section])
+}
+
+model Module {
+  id                String   @id @default(uuid())
+  title             String
+  summary           String
+  durationMinutes   Int
+  orderIndex        Int
+  videoId           String?
+  pdfId             String?
+
+  courseId          String
+  course            Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+}
+
+model Enrollment {
+  id              String   @id @default(uuid())
+  progressPercent Int      @default(0)
+  enrolledAt      DateTime @default(now())
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model Book {
+  id          String   @id @default(uuid())
+  title       String
+  author      String
+  category    String
+  subject     String
+  edition     String
+  coverUrl    String
+  description String
+  featured    Boolean  @default(false)
+  tags        String   // comma separated
+
+  @@index([subject])
+  @@index([featured])
+}
+
+model Quiz {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  subject         String
+  examTrack       String
+  durationMinutes Int
+  totalQuestions  Int      @default(0)
+  difficulty      String
+  topicFocus      String   // comma-separated
+
+  questions       Question[]
+  attempts        QuizAttempt[]
+
+  @@index([subject])
+  @@index([examTrack])
+}
+
+model Question {
+  id              String   @id @default(uuid())
+  subject         String
+  topic           String
+  prompt          String
+  explanation     String
+  difficulty      String
+  correctOptionId String
+
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options         QuestionOption[]
+
+  @@index([quizId])
+  @@index([topic])
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid())
+  label      String
+  text       String
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuizAttempt {
+  id               String    @id @default(uuid())
+  status           String    // in_progress, submitted
+  startedAt        DateTime  @default(now())
+  submittedAt      DateTime?
+  timeSpentSeconds Int       @default(0)
+  score            Int       @default(0)
+  accuracy         Float     @default(0)
+  weakTopics       String    // comma-separated
+  strongTopics     String    // comma-separated
+  answersJson      String    // JSON string
+
+  quizId           String
+  quiz             Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  userId           String
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([status])
+}

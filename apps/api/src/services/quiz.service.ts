@@ -1,204 +1,214 @@
 import { v4 as uuidv4 } from "uuid";
-import type { QuizAnswer, QuizResultPayload } from "@medlearn/shared";
-import { state } from "../data/store.js";
+import { prisma } from "../lib/db.js";
 import { AppError } from "../lib/http-error.js";
-import { getAttemptOrThrow, getQuizOrThrow } from "./helpers.js";
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
-const buildTopicBreakdown = (quizId: string, answers: QuizAnswer[]) => {
-  const relatedQuestions = state.questions.filter((item) => item.quizId === quizId);
-  const scoreByTopic = new Map<string, { correct: number; total: number }>();
-
-  relatedQuestions.forEach((question) => {
-    const bucket = scoreByTopic.get(question.topic) ?? { correct: 0, total: 0 };
-    const answer = answers.find((item) => item.questionId === question.id);
-
-    if (answer?.optionId === question.correctOptionId) {
-      bucket.correct += 1;
-    }
-
-    bucket.total += 1;
-    scoreByTopic.set(question.topic, bucket);
-  });
-
-  const entries = [...scoreByTopic.entries()].map(([topic, stats]) => ({
-    topic,
-    accuracy: stats.total === 0 ? 0 : (stats.correct / stats.total) * 100,
-  }));
-
-  return {
-    weakTopics: entries.filter((item) => item.accuracy < 70).map((item) => item.topic),
-    strongTopics: entries.filter((item) => item.accuracy >= 85).map((item) => item.topic),
-  };
-};
-
-const buildAttemptAnswers = (quizId: string): QuizAnswer[] =>
-  state.questions
-    .filter((item) => item.quizId === quizId)
-    .map((question) => ({
-      questionId: question.id,
-      markedForReview: false,
-      eliminatedOptionIds: [],
-    }));
-
 export const quizService = {
-  getQuizzes() {
-    return state.quizzes.map((quiz) => ({
-      ...quiz,
-      latestAttempt: state.quizAttempts
-        .filter((attempt) => attempt.quizId === quiz.id)
-        .sort((left, right) => right.startedAt.localeCompare(left.startedAt))[0] ?? null,
+  async getQuizzes() {
+    const quizzes = await prisma.quiz.findMany({
+      include: { _count: { select: { questions: true } } },
+    });
+    return quizzes.map((q) => ({
+      ...q,
+      topicFocus: q.topicFocus ? q.topicFocus.split(",") : [],
+      totalQuestions: q._count.questions,
     }));
   },
 
-  getQuiz(quizId: string) {
-    const quiz = getQuizOrThrow(quizId);
-
+  async getQuiz(quizId: string) {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      include: {
+        questions: { include: { options: true } },
+      },
+    });
+    if (!quiz) throw new AppError("Quiz not found", 404);
     return {
       ...quiz,
-      questions: state.questions.filter((item) => item.quizId === quiz.id),
+      topicFocus: quiz.topicFocus ? quiz.topicFocus.split(",") : [],
+      questions: quiz.questions,
     };
   },
 
-  startQuiz(userId: string, quizId: string) {
-    const quiz = getQuizOrThrow(quizId);
-    const currentAttempt = state.quizAttempts.find(
-      (item) => item.quizId === quizId && item.userId === userId && item.status === "in_progress",
-    );
+  async startQuiz(userId: string, quizId: string) {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      include: { questions: { include: { options: true } } },
+    });
+    if (!quiz) throw new AppError("Quiz not found", 404);
 
-    if (currentAttempt) {
+    // Check for existing in-progress attempt
+    const existing = await prisma.quizAttempt.findFirst({
+      where: { quizId, userId, status: "in_progress" },
+    });
+
+    if (existing) {
       return {
-        attempt: currentAttempt,
-        quiz,
-        questions: state.questions.filter((item) => item.quizId === quiz.id),
+        attempt: { ...existing, weakTopics: existing.weakTopics.split(",").filter(Boolean), strongTopics: existing.strongTopics.split(",").filter(Boolean), answers: JSON.parse(existing.answersJson || "[]") },
+        quiz: { ...quiz, topicFocus: quiz.topicFocus.split(",") },
+        questions: quiz.questions,
       };
     }
 
-    const attempt = {
-      id: uuidv4(),
-      quizId,
-      userId,
-      status: "in_progress" as const,
-      startedAt: new Date().toISOString(),
-      timeSpentSeconds: 0,
-      score: 0,
-      accuracy: 0,
-      answers: buildAttemptAnswers(quizId),
-    };
-
-    state.quizAttempts.push(attempt);
+    const attempt = await prisma.quizAttempt.create({
+      data: {
+        quizId,
+        userId,
+        status: "in_progress",
+        weakTopics: "",
+        strongTopics: "",
+        answersJson: JSON.stringify(quiz.questions.map((q) => ({ questionId: q.id, markedForReview: false, eliminatedOptionIds: [] }))),
+      },
+    });
 
     return {
-      attempt,
-      quiz,
-      questions: state.questions.filter((item) => item.quizId === quiz.id),
+      attempt: { ...attempt, weakTopics: [], strongTopics: [], answers: JSON.parse(attempt.answersJson) },
+      quiz: { ...quiz, topicFocus: quiz.topicFocus.split(",") },
+      questions: quiz.questions,
     };
   },
 
-  submitQuiz(userId: string, payload: { attemptId: string; answers: QuizAnswer[]; timeSpentSeconds: number }) {
-    const attempt = getAttemptOrThrow(payload.attemptId);
+  async submitQuiz(userId: string, payload: { attemptId: string; answers: any[]; timeSpentSeconds: number }) {
+    const attempt = await prisma.quizAttempt.findUnique({ where: { id: payload.attemptId } });
+    if (!attempt) throw new AppError("Attempt not found", 404);
+    if (attempt.userId !== userId) throw new AppError("Cannot submit another user's attempt", 403);
 
-    if (attempt.userId !== userId) {
-      throw new AppError("Cannot submit another user's attempt", 403);
-    }
-
-    const quiz = getQuizOrThrow(attempt.quizId);
-    const relatedQuestions = state.questions.filter((item) => item.quizId === quiz.id);
-    const normalizedAnswers = buildAttemptAnswers(quiz.id).map((base) => {
-      const answer = payload.answers.find((item) => item.questionId === base.questionId);
-      return answer ? { ...base, ...answer } : base;
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: attempt.quizId },
+      include: { questions: { include: { options: true } } },
     });
+    if (!quiz) throw new AppError("Quiz not found", 404);
 
-    const correctCount = relatedQuestions.filter((question) => {
-      const answer = normalizedAnswers.find((item) => item.questionId === question.id);
-      return answer?.optionId === question.correctOptionId;
+    const correctCount = quiz.questions.filter((q) => {
+      const answer = payload.answers.find((a) => a.questionId === q.id);
+      return answer?.optionId === q.correctOptionId;
     }).length;
 
-    const accuracy = round((correctCount / relatedQuestions.length) * 100);
+    const accuracy = round((correctCount / (quiz.questions.length || 1)) * 100);
 
-    attempt.answers = normalizedAnswers;
-    attempt.status = "submitted";
-    attempt.submittedAt = new Date().toISOString();
-    attempt.timeSpentSeconds = payload.timeSpentSeconds;
-    attempt.accuracy = accuracy;
-    attempt.score = accuracy;
+    // Build topic breakdown
+    const topicMap = new Map<string, { correct: number; total: number }>();
+    quiz.questions.forEach((q) => {
+      const bucket = topicMap.get(q.topic) ?? { correct: 0, total: 0 };
+      const answer = payload.answers.find((a) => a.questionId === q.id);
+      if (answer?.optionId === q.correctOptionId) bucket.correct++;
+      bucket.total++;
+      topicMap.set(q.topic, bucket);
+    });
 
-    const snapshot = state.progressSnapshots.find((item) => item.userId === userId);
+    const weakTopics = [...topicMap.entries()].filter(([_, s]) => (s.correct / s.total) * 100 < 70).map(([t]) => t);
+    const strongTopics = [...topicMap.entries()].filter(([_, s]) => (s.correct / s.total) * 100 >= 85).map(([t]) => t);
 
-    if (snapshot) {
-      const submittedAttempts = state.quizAttempts.filter(
-        (item) => item.userId === userId && item.status === "submitted",
-      );
-      snapshot.quizzesTaken = submittedAttempts.length;
-      snapshot.averageAccuracy = round(
-        submittedAttempts.reduce((sum, item) => sum + item.accuracy, 0) / submittedAttempts.length,
-      );
-      const topics = buildTopicBreakdown(quiz.id, normalizedAnswers);
-      snapshot.weakTopics = topics.weakTopics;
-      snapshot.strongTopics = topics.strongTopics;
-    }
-
-    return this.getResult(attempt.id, userId);
-  },
-
-  getResult(attemptId: string, userId: string): QuizResultPayload {
-    const attempt = getAttemptOrThrow(attemptId);
-
-    if (attempt.userId !== userId) {
-      throw new AppError("Cannot view another user's result", 403);
-    }
-
-    const quiz = getQuizOrThrow(attempt.quizId);
-    const relatedQuestions = state.questions.filter((item) => item.quizId === quiz.id);
-    const topics = buildTopicBreakdown(quiz.id, attempt.answers);
+    const updated = await prisma.quizAttempt.update({
+      where: { id: payload.attemptId },
+      data: {
+        status: "submitted",
+        submittedAt: new Date(),
+        timeSpentSeconds: payload.timeSpentSeconds,
+        score: Math.round(accuracy),
+        accuracy,
+        weakTopics: weakTopics.join(","),
+        strongTopics: strongTopics.join(","),
+        answersJson: JSON.stringify(payload.answers),
+      },
+    });
 
     return {
-      attempt,
-      quiz,
-      questions: relatedQuestions,
-      weakTopics: topics.weakTopics,
-      strongTopics: topics.strongTopics,
+      attempt: { ...updated, weakTopics, strongTopics, answers: payload.answers },
+      quiz: { ...quiz, topicFocus: quiz.topicFocus.split(",") },
+      questions: quiz.questions,
+      weakTopics,
+      strongTopics,
     };
   },
 
-  getQuestions(query?: { quizId?: string; subject?: string }) {
-    return state.questions.filter((item) => {
-      const matchesQuiz = query?.quizId ? item.quizId === query.quizId : true;
-      const matchesSubject = query?.subject
-        ? item.subject.toLowerCase() === query.subject.toLowerCase()
-        : true;
-      return matchesQuiz && matchesSubject;
+  async getResult(attemptId: string, userId: string) {
+    const attempt = await prisma.quizAttempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) throw new AppError("Attempt not found", 404);
+    if (attempt.userId !== userId) throw new AppError("Cannot view another user's result", 403);
+
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: attempt.quizId },
+      include: { questions: { include: { options: true } } },
     });
+    if (!quiz) throw new AppError("Quiz not found", 404);
+
+    return {
+      attempt: {
+        ...attempt,
+        weakTopics: attempt.weakTopics.split(",").filter(Boolean),
+        strongTopics: attempt.strongTopics.split(",").filter(Boolean),
+        answers: JSON.parse(attempt.answersJson || "[]"),
+      },
+      quiz: { ...quiz, topicFocus: quiz.topicFocus.split(",") },
+      questions: quiz.questions,
+      weakTopics: attempt.weakTopics.split(",").filter(Boolean),
+      strongTopics: attempt.strongTopics.split(",").filter(Boolean),
+    };
   },
 
-  createQuestion(payload: {
+  async getHistory(userId: string) {
+    const attempts = await prisma.quizAttempt.findMany({
+      where: { userId },
+      orderBy: { startedAt: "desc" },
+      include: { quiz: true },
+    });
+    return attempts.map((a) => ({
+      ...a,
+      weakTopics: a.weakTopics.split(",").filter(Boolean),
+      strongTopics: a.strongTopics.split(",").filter(Boolean),
+      answers: JSON.parse(a.answersJson || "[]"),
+    }));
+  },
+
+  async getQuestions(query?: { quizId?: string; subject?: string }) {
+    const where: any = {};
+    if (query?.quizId) where.quizId = query.quizId;
+    if (query?.subject) where.subject = { contains: query.subject };
+
+    const questions = await prisma.question.findMany({
+      where,
+      include: { options: true },
+    });
+    return questions;
+  },
+
+  async createQuestion(payload: {
     quizId: string;
     subject: string;
     topic: string;
     prompt: string;
     explanation: string;
-    difficulty: "easy" | "medium" | "hard";
+    difficulty: string;
     correctOptionId: string;
     options: Array<{ id: string; label: string; text: string }>;
   }) {
-    getQuizOrThrow(payload.quizId);
-    const question = {
-      id: uuidv4(),
-      ...payload,
-    };
+    const quiz = await prisma.quiz.findUnique({ where: { id: payload.quizId } });
+    if (!quiz) throw new AppError("Quiz not found", 404);
 
-    state.questions.push(question);
+    const question = await prisma.question.create({
+      data: {
+        quizId: payload.quizId,
+        subject: payload.subject,
+        topic: payload.topic,
+        prompt: payload.prompt,
+        explanation: payload.explanation,
+        difficulty: payload.difficulty,
+        correctOptionId: payload.correctOptionId,
+        options: {
+          create: payload.options.map((o) => ({ id: o.id, label: o.label, text: o.text })),
+        },
+      },
+      include: { options: true },
+    });
+
+    // Update quiz totalQuestions count
+    await prisma.quiz.update({
+      where: { id: payload.quizId },
+      data: { totalQuestions: { increment: 1 } },
+    });
+
     return question;
-  },
-
-  getHistory(userId: string) {
-    return state.quizAttempts
-      .filter((item) => item.userId === userId)
-      .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
-      .map((attempt) => ({
-        ...attempt,
-        quiz: state.quizzes.find((quiz) => quiz.id === attempt.quizId),
-      }));
   },
 };

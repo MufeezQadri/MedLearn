@@ -3,14 +3,17 @@ import { aiService } from "../services/ai.service.js";
 
 export const aiController = {
   async chat(req: Request, res: Response) {
-    res.json({ success: true, data: aiService.chat(req.user!.id, req.body.prompt) });
+    const data = await aiService.chat(req.user!.id, req.body.prompt);
+    res.json({ success: true, data });
   },
 
   async recommendations(req: Request, res: Response) {
-    res.json({ success: true, data: aiService.getRecommendations(req.user!.id) });
+    const data = await aiService.getRecommendations(req.user!.id);
+    res.json({ success: true, data });
   },
 
   async analyzePerformance(req: Request, res: Response) {
-    res.json({ success: true, data: aiService.analyzePerformance(req.user!.id, req.body) });
+    const data = await aiService.analyzePerformance(req.user!.id, req.body);
+    res.json({ success: true, data });
   },
 };

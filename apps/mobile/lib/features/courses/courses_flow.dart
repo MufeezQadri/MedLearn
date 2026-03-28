@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/mock_data.dart';
 import '../../core/models.dart';
+import '../../core/api_client.dart';
 import '../../core/widgets/med_widgets.dart';
 
 class CoursesPage extends StatefulWidget {
@@ -16,7 +17,22 @@ class _CoursesPageState extends State<CoursesPage> {
   final _searchController = TextEditingController();
   String _selectedFilter = 'All';
 
-  static const _filters = ['All', 'Anatomy', 'Medicine', 'Pathology', 'Surgery'];
+  static const _filters = ['All', 'NEET', '1st year', '2nd year', '3rd year', '4th year'];
+
+  List<Course>? _courses;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    final liveCourses = await MedLearnApi.getCourses();
+    if (mounted) {
+      setState(() => _courses = liveCourses);
+    }
+  }
 
   @override
   void dispose() {
@@ -26,15 +42,26 @@ class _CoursesPageState extends State<CoursesPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_courses == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final query = _searchController.text.toLowerCase();
-    final courses = DemoCatalog.courses.where((course) {
+    final filteredCourses = _courses!.where((course) {
       final matchesQuery = query.isEmpty ||
           course.title.toLowerCase().contains(query) ||
           course.subject.toLowerCase().contains(query) ||
           course.tags.any((tag) => tag.toLowerCase().contains(query));
-      final matchesFilter = _selectedFilter == 'All' || course.subject == _selectedFilter;
+      final matchesFilter = _selectedFilter == 'All' || course.section == _selectedFilter;
       return matchesQuery && matchesFilter;
     }).toList();
+
+    // Grouping by section
+    final Map<String, List<Course>> chunkedCourses = {};
+    for (var c in filteredCourses) {
+      if (!chunkedCourses.containsKey(c.section)) chunkedCourses[c.section] = [];
+      chunkedCourses[c.section]!.add(c);
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
@@ -70,7 +97,7 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Browse by subject, jump back into unfinished modules, and move from video to PDF without losing your progress signal.',
+                'Browse by year or exam, jump back into unfinished modules, and move from video to PDF smoothly.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.white.withValues(alpha: 0.76),
                     ),
@@ -120,21 +147,31 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
         ),
         const SizedBox(height: 18),
-        if (courses.isNotEmpty) ...[
-          _FeaturedCourseCard(course: courses.first),
-          const SizedBox(height: 16),
+        if (filteredCourses.isNotEmpty && _selectedFilter == 'All' && query.isEmpty) ...[
+          _FeaturedCourseCard(course: DemoCatalog.courses.firstWhere((c) => c.section == 'NEET', orElse: () => DemoCatalog.courses.first)),
+          const SizedBox(height: 24),
         ],
-        ...courses.map(
-          (course) => Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: _CourseCard(
-              course: course,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CourseDetailPage(course: course)),
+        ...chunkedCourses.entries.map((group) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionHeader(eyebrow: 'Section', title: group.key),
+              const SizedBox(height: 14),
+              ...group.value.map(
+                (course) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _CourseCard(
+                    course: course,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => CourseDetailPage(course: course)),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
+              const SizedBox(height: 10),
+            ],
+          );
+        }),
       ],
     );
   }

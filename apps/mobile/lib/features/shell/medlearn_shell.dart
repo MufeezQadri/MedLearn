@@ -8,7 +8,6 @@ import '../../core/mock_data.dart';
 import '../../core/models.dart';
 import '../../core/widgets/med_widgets.dart';
 import '../admin/admin_page.dart';
-import '../assistant/assistant_page.dart';
 import '../courses/courses_flow.dart';
 import '../dashboard/dashboard_page.dart';
 import '../library/library_page.dart';
@@ -33,10 +32,9 @@ class _MedlearnShellState extends ConsumerState<MedlearnShell> {
     final user = state.currentUser!;
 
     final pages = <Widget>[
-      DashboardPage(onOpenCourses: () => setState(() => _index = 1), onOpenPlanner: () => setState(() => _index = 4)),
+      DashboardPage(onOpenCourses: () => setState(() => _index = 1), onOpenPlanner: () => setState(() => _index = 3)),
       const CoursesPage(),
       const QuizHubPage(),
-      const AssistantPage(),
       const PlannerPage(),
     ];
 
@@ -53,13 +51,8 @@ class _MedlearnShellState extends ConsumerState<MedlearnShell> {
       ),
       _ShellDestination(
         label: 'Quiz',
-        icon: Icons.quiz_outlined,
-        selectedIcon: Icons.quiz_rounded,
-      ),
-      _ShellDestination(
-        label: 'AI',
-        icon: Icons.auto_awesome_outlined,
-        selectedIcon: Icons.auto_awesome_rounded,
+        icon: Icons.bolt_outlined,
+        selectedIcon: Icons.bolt_rounded,
       ),
       _ShellDestination(
         label: 'Planner',
@@ -68,7 +61,7 @@ class _MedlearnShellState extends ConsumerState<MedlearnShell> {
       ),
     ];
 
-    final titles = ['Learning cockpit', 'Courses', 'Quiz engine', 'AI assistant', 'Study planner'];
+    final titles = ['Learning cockpit', 'Courses', 'Quiz engine', 'Study planner'];
 
     return Scaffold(
       extendBody: true,
@@ -243,10 +236,8 @@ class _ShellTopBar extends StatelessWidget {
           width: 48,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [MedlearnColors.primary, MedlearnColors.primaryContainer],
-            ),
-            borderRadius: BorderRadius.circular(18),
+            color: MedlearnColors.primary,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
             initials,
@@ -272,16 +263,16 @@ class _ShellNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-        boxShadow: const [
+        color: Colors.white.withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: MedlearnColors.outline.withValues(alpha: 0.4)),
+        boxShadow: [
           BoxShadow(
-            color: MedlearnColors.shadow,
-            blurRadius: 30,
-            offset: Offset(0, 16),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -292,15 +283,15 @@ class _ShellNavBar extends StatelessWidget {
 
           return Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(24),
               onTap: () => onTap(itemIndex),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: selected ? MedlearnColors.primaryFixed : Colors.transparent,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -347,14 +338,7 @@ class _AppDrawer extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 64, 20, 22),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    MedlearnColors.primaryDark,
-                    MedlearnColors.primary,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: MedlearnColors.primaryDark,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
