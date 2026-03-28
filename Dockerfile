@@ -40,5 +40,5 @@ RUN mkdir -p apps/api/public/uploads
 
 EXPOSE 4000
 
-# Use a shell format to see logs more clearly and force wait for DB sync
-CMD npm run start:prod --workspace=@medlearn/api
+# Use an explicit JSON array for the CMD to ensure correct path and signal handling
+CMD ["npm", "run", "start:prod", "--workspace=@medlearn/api"]
