@@ -20,20 +20,25 @@ RUN npm run build --workspace=@medlearn/api
 
 # Production image
 FROM base AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 
+# Copy root package.json and all workspace package.jsons (required for npm workspace commands)
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/shared/package*.json ./packages/shared/
+
+# Copy built dependencies and compiled output
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/packages/shared ./packages/shared
 
-WORKDIR /app/apps/api
-
-# Create uploads directory
-RUN mkdir -p public/uploads
+# Create uploads directory (ensure it's in the correct relative path for the api)
+RUN mkdir -p apps/api/public/uploads
 
 EXPOSE 4000
 
-# Use npm run start:prod to handle DB sync before launching node index.js
-CMD ["npm", "run", "start:prod", "--workspace=@medlearn/api"]
+# Use a shell format to see logs more clearly and force wait for DB sync
+CMD npm run start:prod --workspace=@medlearn/api
