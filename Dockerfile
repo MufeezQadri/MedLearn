@@ -8,10 +8,10 @@ COPY apps/api/package*.json ./apps/api/
 COPY packages/shared/package*.json ./packages/shared/
 RUN npm ci --workspace=@medlearn/api --workspace=@medlearn/shared --include-workspace-root
 
-# Build shared package
+# Build shared package - just copy it, apps/api will build its own dependencies
 FROM deps AS builder
 COPY packages/shared ./packages/shared
-RUN npm run build --workspace=@medlearn/shared
+# Skip RUN npm run build --workspace=@medlearn/shared as it's missing a build script
 
 COPY apps/api ./apps/api
 RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
@@ -25,7 +25,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared ./packages/shared
 
 WORKDIR /app/apps/api
 
@@ -34,4 +34,5 @@ RUN mkdir -p public/uploads
 
 EXPOSE 4000
 
-CMD ["node", "dist/server.js"]
+# Use npm run start:prod to handle DB sync before launching node index.js
+CMD ["npm", "run", "start:prod", "--workspace=@medlearn/api"]
