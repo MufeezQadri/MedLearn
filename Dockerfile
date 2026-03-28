@@ -14,7 +14,7 @@ COPY packages/shared ./packages/shared
 # Skip RUN npm run build --workspace=@medlearn/shared as it's missing a build script
 
 COPY apps/api ./apps/api
-RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
+RUN npm run prisma:generate --workspace=@medlearn/api
 RUN npm run build --workspace=@medlearn/api
 
 # Production image
