@@ -1,5 +1,7 @@
 import { prisma } from "../lib/db.js";
 import { cache } from "../lib/cache.js";
+import { v4 as uuidv4 } from "uuid";
+import { AppError } from "../lib/http-error.js";
 
 export const coursesService = {
   async getCourses(query?: { subject?: string; search?: string }) {

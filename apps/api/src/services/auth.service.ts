@@ -1,12 +1,14 @@
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../lib/db.js";
+import { cache } from "../lib/cache.js";
 
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
 import { AppError } from "../lib/http-error.js";
+import { env } from "../config/env.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../lib/jwt.js";
 
 // Basic in-memory refresh token store since redis might not be running

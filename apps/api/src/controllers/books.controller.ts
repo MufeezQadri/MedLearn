@@ -8,14 +8,15 @@ export const booksController = {
   },
 
   async get(req: Request, res: Response) {
-    res.json({ success: true, data: booksService.getBook(req.params.id) });
+    const data = await booksService.getBook(req.params.id as string);
+    res.json({ success: true, data });
   },
 
   async create(req: Request, res: Response) {
-    res.status(201).json({ success: true, data: booksService.createBook(req.body) });
+    res.status(201).json({ success: true, data: await booksService.createBook(req.body) });
   },
 
   async search(req: Request, res: Response) {
-    res.json({ success: true, data: booksService.searchBooks((req.query.q as string) ?? "") });
+    res.json({ success: true, data: await booksService.searchBooks((req.query.q as string) ?? "") });
   },
 };

@@ -4,6 +4,7 @@ WORKDIR /app
 # Install dependencies
 FROM base AS deps
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY apps/api/package*.json ./apps/api/
 COPY packages/shared/package*.json ./packages/shared/
 RUN npm ci --workspace=@medlearn/api --workspace=@medlearn/shared --include-workspace-root

@@ -17,7 +17,7 @@ import type {
   User,
   UserNotification,
   VideoResource,
-} from "./types";
+} from "./types.js";
 
 export const users: User[] = [
   {

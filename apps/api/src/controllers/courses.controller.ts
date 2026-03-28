@@ -11,7 +11,10 @@ export const coursesController = {
   },
 
   async get(req: Request, res: Response) {
-    res.json({ success: true, data: coursesService.getCourse(req.params.id) });
+    res.json({
+      success: true,
+      data: await coursesService.getCourse(req.params.id as string),
+    });
   },
 
   async create(req: Request, res: Response) {
@@ -20,19 +23,23 @@ export const coursesController = {
   },
 
   async update(req: Request, res: Response) {
-    const data = await coursesService.updateCourse(req.params.id, req.body);
+    const data = await coursesService.updateCourse(
+      req.params.id as string,
+      req.body,
+    );
     res.json({ success: true, data });
   },
 
   async remove(req: Request, res: Response) {
-    const data = await coursesService.deleteCourse(req.params.id);
+    const data = await coursesService.deleteCourse(req.params.id as string);
     res.json({ success: true, data });
   },
 
   async enroll(req: Request, res: Response) {
-    res.status(201).json({
-      success: true,
-      data: coursesService.enrollCourse(req.params.id, req.user!.id),
-    });
+    const data = await coursesService.enrollCourse(
+      req.params.id as string,
+      req.user!.id,
+    );
+    res.status(201).json({ success: true, data });
   },
 };

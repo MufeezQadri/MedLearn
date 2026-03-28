@@ -1,2 +1,2 @@
-export * from "./mockData";
-export * from "./types";
+export * from "./mockData.js";
+export * from "./types.js";

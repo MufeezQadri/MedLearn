@@ -8,22 +8,28 @@ export const quizController = {
   },
 
   async get(req: Request, res: Response) {
-    const data = await quizService.getQuiz(req.params.id);
+    const data = await quizService.getQuiz(req.params.id as string);
     res.json({ success: true, data });
   },
 
   async start(req: Request, res: Response) {
-    const data = await quizService.startQuiz(req.user!.id, req.body.quizId);
+    const data = await quizService.startQuiz(
+      req.user!.id,
+      req.body.quizId as string,
+    );
     res.status(201).json({ success: true, data });
   },
 
   async submit(req: Request, res: Response) {
-    const data = await quizService.submitQuiz(req.user!.id, req.body);
+    const data = await quizService.submitQuiz(req.user!.id, req.body as any);
     res.json({ success: true, data });
   },
 
   async result(req: Request, res: Response) {
-    const data = await quizService.getResult(req.params.id, req.user!.id);
+    const data = await quizService.getResult(
+      req.params.id as string,
+      req.user!.id,
+    );
     res.json({ success: true, data });
   },
 
@@ -36,7 +42,7 @@ export const quizController = {
   },
 
   async createQuestion(req: Request, res: Response) {
-    const data = await quizService.createQuestion(req.body);
+    const data = await quizService.createQuestion(req.body as any);
     res.status(201).json({ success: true, data });
   },
 

@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { AppError } from "./http-error.js";
 
 interface JwtUser {
   id: string;
